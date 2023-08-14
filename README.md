@@ -1,6 +1,6 @@
 # Transition
 
-This repository is a Python port of S. Baar Matlab code to test
+This repository is a Python port of S. Baars Matlab code to test
 transition probability estimate method on the double well problem.
 
 Of particular interest is the implementation of the trajectory-adaptive multilevel splitting (TAMS).
