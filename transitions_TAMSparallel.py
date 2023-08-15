@@ -39,10 +39,6 @@ def generate_traj(F, B, z0, dt, nstep, rho):
 
 
 def regenerate_singleExp(ovrw_expe, rst_exp, minVal, F, B, dt, tmax, rho):
-
-    #print(minVal)
-    #print(rest_exp["d"])
-
     # Take a restart point on the randomly selected traj that has a value 
     # close, but larger than the min_val
     same_dist_idx = 0
@@ -82,7 +78,6 @@ def regenerate_singleExp(ovrw_expe, rst_exp, minVal, F, B, dt, tmax, rho):
 
 
 def transitions_ptams(F, B, z0, phi, dt, tmax, N, N3, rho):
-
     # Multiproc
     Nproc = 12
 
@@ -104,7 +99,6 @@ def transitions_ptams(F, B, z0, phi, dt, tmax, N, N3, rho):
         experiments.append(exp.get())
 
     initGen = time.time() - st_initGen
-    #print("Time to generate the initial {} trajectories: {}".format(N,initGen))
 
     its = 0
     l = []
@@ -119,17 +113,10 @@ def transitions_ptams(F, B, z0, phi, dt, tmax, N, N3, rho):
         # Find the n trajectories with the smallest values of max_dist
         # n being the number of processes
         maxes = np.zeros(len(experiments))
-        times = np.zeros(len(experiments))
         for i in range(len(experiments)):
             maxes[i] = experiments[i]['max_dist']
-            times[i] = experiments[i]['t'][-1]
         min_idx_list = np.argpartition(maxes, Nproc)[:Nproc]
         min_vals = maxes[min_idx_list]
-        #print("Mins to updates")
-        #print(maxes)
-        #print(times)
-        #print(min_vals)
-        #print(min_idx_list)
 
         # Randomy pick the Nproc experiments we'll restart from
         rest_experiments = []
@@ -162,17 +149,9 @@ def transitions_ptams(F, B, z0, phi, dt, tmax, N, N3, rho):
                                                                          rest_experiments[exp_idx],
                                                                          min_vals[exp_idx], F, B, dt, tmax, rho)))
 
-        # Serial version
-        #reg_expes = []
-        #for exp_idx in range(len(min_idx_list)):
-        #    reg_expes.append(regenerate_singleExp(experiments[min_idx_list[exp_idx]],
-        #                                          rest_experiments[exp_idx],
-        #                                          min_vals[exp_idx], F, B, dt, tmax, rho))
-
         # Update experiments
         for i in range(len(min_idx_list)):
             experiments[min_idx_list[i]] = copy.deepcopy(reg_expes[i].get())
-            #experiments[min_idx_list[i]] = copy.deepcopy(reg_expes[i])
 
         its += 1
         iteTime = time.time() - st_ite
@@ -197,7 +176,5 @@ def transitions_ptams(F, B, z0, phi, dt, tmax, N, N3, rho):
         time_steps += exp['steps']
 
     trans_prob = Nb * w[-1] / W
-
-    #print(trans_prob)
 
     return trans_prob, time_steps
