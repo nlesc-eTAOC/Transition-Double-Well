@@ -91,8 +91,11 @@ def make_samples(f, nargout, nsamples, *args):
         data['median'] = compute_median(d)
         data['Q1'] = compute_median(d[:int(len(d) / 2)])
         data['Q3'] = compute_median(d[round(len(d) / 2):])
-        data['normalized_error'] = data['sigma'] \
-            / data['mu'] * np.sqrt(data['avg_steps'])
+        if data['mu'] > 0.0:
+            data['normalized_error'] = data['sigma'] \
+                / data['mu'] * np.sqrt(data['avg_steps'])
+        else:
+            data['normalized_error'] = 0.0
     return data, *varargout
 
 
@@ -112,11 +115,11 @@ if __name__ == '__main__':
     zB = np.array([1.0, 0.0])
     zC = np.array([0.0, 0.0])
     
-    samples = 100
+    samples = 10
     
-    Nmfpt = 2000
-    Ndirect = 2000
-    Ntams = 5000
+    Nmfpt = 200
+    Ndirect = 200
+    Ntams = 1000
 
     # Generic part
     VxxEv = np.linalg.eigvals(Vxx(zC))
@@ -192,72 +195,63 @@ if __name__ == '__main__':
         print("Compute MFPT directly, might take a while ...")
         mfpt = 0
         data = 0
-        #if mfptt < 1e5:
-        #    data, trans_prob, mfpt = make_samples(
-        #        transitions_mfpt, 3, samples, F, B, z0, phi, dt, 1, Nmfpt, rho)
-        #mfpt_list3.append(mfpt)
-        #data_list3.append(data)
+        if mfptt < 1e5:
+            data, trans_prob, mfpt = make_samples(
+                transitions_mfpt, 3, samples, F, B, z0, phi, dt, 1, Nmfpt, rho)
+        mfpt_list3.append(mfpt)
+        data_list3.append(data)
     
         print("Compute MFPT with AMS, might take a while ...")
-        #data, trans_prob, mfpt = make_samples(
-        #     transitions_ams, 3, samples, F, B, z0, phi, dt, 1, Nmfpt, rho)
-        #mfpt_list5.append(mfpt)
-        #data_list5.append(data)
+        data, trans_prob, mfpt = make_samples(
+             transitions_ams, 3, samples, F, B, z0, phi, dt, 1, Nmfpt, rho)
+        mfpt_list5.append(mfpt)
+        data_list5.append(data)
     
         for tmax in Trange:
-            print('T = {}'.format(tmax))
+            print('\n T = {}'.format(tmax))
     
             # Theoretical value
             trans_prob_list1[Bi].append(1 - np.exp(-1 / mfpt_list1[Bi] * tmax))
-            print("Theor. trans. proba.: ", trans_prob_list1[Bi][-1])
+            print(" => Theor. trans. proba.: {}".format(trans_prob_list1[Bi][-1]))
 
             trans_prob = 0.0
     
             # Direct Monte-Carlo
-            #print("Compute using direct method")
-            #data, trans_prob = make_samples(
-            #    transitions_direct, 2, samples, F, B, z0, phi, dt, tmax, Ndirect, rho)
-            #trans_prob_list2[Bi].append(trans_prob)
-            #data_list2[Bi].append(data)
-            #error_list2[Bi][tmax] = [trans_prob - data['Q1'], data['Q3'] - trans_prob]
-            #normalized_error_list2[Bi].append(np.sqrt(dt) * data['normalized_error'])
+            print(" => Compute using direct method")
+            data, trans_prob = make_samples(
+                transitions_direct, 2, samples, F, B, z0, phi, dt, tmax, Ndirect, rho)
+            trans_prob_list2[Bi].append(trans_prob)
+            data_list2[Bi].append(data)
+            error_list2[Bi][tmax] = [trans_prob - data['Q1'], data['Q3'] - trans_prob]
+            normalized_error_list2[Bi].append(np.sqrt(dt) * data['normalized_error'])
+            print("    Direct trans. proba.: {}".format(trans_prob))
     
-            #print("Direct trans. proba.: ", trans_prob)
+            # Using the direct MFPT computed above
+            print(" => Compute using direct MFPT method")
+            trans_prob = 1 - np.exp(-1 / mfpt_list3[Bi] * tmax)
+            data = data_list3[Bi]
+            trans_prob_list3[Bi].append(trans_prob)
+            error_list3[Bi][tmax] = [trans_prob - data['Q1'] / data['mu'] * trans_prob,
+                                     data['Q3'] / data['mu'] * trans_prob - trans_prob]
+            normalized_error_list3[Bi].append(np.sqrt(dt) *
+                                              data['normalized_error'] /
+                                              data['mu'] * trans_prob)
+            print("    Direct MFPT trans. proba.: {}".format(trans_prob))
     
-            #print("Compute using direct MFPT method")
-            #trans_prob = 1 - np.exp(-1 / mfpt_list3[Bi] * tmax)
-            #data = data_list3[Bi]
-            #trans_prob_list3[Bi].append(trans_prob)
-            #error_list3[Bi][tmax] = [trans_prob - data['Q1'] / data['mu'] * trans_prob,
-            #                         data['Q3'] / data['mu'] * trans_prob - trans_prob]
-            #normalized_error_list3[Bi].append(np.sqrt(dt) *
-            #                                  data['normalized_error'] /
-            #                                  data['mu'] * trans_prob)
+            # Using the AMS MFPT computed above
+            print(" => Compute using the MFPT obtained with the AMS method")
+            trans_prob = 1 - np.exp(-1 / mfpt_list5[Bi] * tmax)
+            data = data_list5[Bi]
+            trans_prob_list5[Bi].append(trans_prob)
+            error_list5[Bi][tmax] = [trans_prob - data['Q1'] / data['mu'] * trans_prob,
+                                     data['Q3'] / data['mu'] * trans_prob - trans_prob]
+            normalized_error_list5[Bi].append(np.sqrt(dt) *
+                                              data['normalized_error'] /
+                                              data['mu'] * trans_prob)
+            print("    AMS trans. proba.: {}".format(trans_prob))
     
-            #print("Direct MFPT trans. proba.: ", trans_prob)
-    
-            # print("Compute using direct GPA method")
-            # data, trans_prob = make_samples(
-            #     transitions_gpa, samples, F, B, z0, phi, dt, tmax, Ndirect, rho)
-            # trans_prob_list4[Bi].append(trans_prob)
-            # data_list4[Bi].append(data)
-            # error_list4[Bi][tmax] = [trans_prob - data.Q1, data.Q3 - trans_prob]
-            # normalized_error_list4[Bi].append(np.sqrt(dt) *
-            #                                   data.normalized_error)
-    
-            print("Compute using the MFPT obtained with the AMS method")
-            #trans_prob = 1 - np.exp(-1 / mfpt_list5[Bi] * tmax)
-            #data = data_list5[Bi]
-            #trans_prob_list5[Bi].append(trans_prob)
-            #error_list5[Bi][tmax] = [trans_prob - data['Q1'] / data['mu'] * trans_prob,
-            #                         data['Q3'] / data['mu'] * trans_prob - trans_prob]
-            #normalized_error_list5[Bi].append(np.sqrt(dt) *
-            #                                  data['normalized_error'] /
-            #                                  data['mu'] * trans_prob)
-    
-            print("AMS trans. proba.: ", trans_prob)
-    
-            print("Compute using direct TAMS method")
+            # Using the TAMS
+            print(" => Compute using direct TAMS method")
             data, trans_prob = make_samples(
                 transitions_ptams, 2, samples, F, B, z0, phi, dt,
                 tmax, Nmfpt, Ntams, rho)
@@ -266,8 +260,7 @@ if __name__ == '__main__':
             error_list6[Bi][tmax] = [trans_prob - data['Q1'], data['Q3'] - trans_prob]
             normalized_error_list6[Bi].append(np.sqrt(dt) *
                                               data['normalized_error'])
-    
-            print("TAMS trans. proba.: ", trans_prob)
+            print("    TAMS trans. proba.: {}".format(trans_prob))
     
     # Plots
     # TODO

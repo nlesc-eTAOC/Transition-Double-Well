@@ -27,5 +27,3 @@ def transitions_direct(F, B, z0, phi, dt, tmax, N, rho):
     trans_prob = ntrans / N
 
     return trans_prob, time_steps
-
-
